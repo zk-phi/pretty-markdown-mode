@@ -136,7 +136,7 @@ pretty-markdown mode is turned on."
     ("^\\(#[\s\t]+\\)\\(.*\\)$"
      (1 'pretty-markdown-hide-face)
      (2 'pretty-markdown-h1-face))
-    ("\\(`\\)\\([^`\n]+\\)\\(`\\)"
+    ("\\(?:^\\|[^`]\\)\\(`\\)\\(`*[^`\n]+`*\\)\\(`\\)\\(?:$\\|[^`]\\)"
      (1 'pretty-markdown-hide-face)
      (2 'pretty-markdown-kbd-face)
      (3 'pretty-markdown-hide-face))
@@ -156,7 +156,7 @@ pretty-markdown mode is turned on."
      (1 'pretty-markdown-hide-face)
      (2 'pretty-markdown-strikethrough-face)
      (3 'pretty-markdown-hide-face))
-    ("^\\(\\*\\*\\(\\*\\)+\\|--\\(-\\)+\\|- -\\( -\\)+\\)\n"
+    ("^\\(\\*\\*\\(\\*\\)+\\|--\\(-\\)+\\|- -\\( -\\)+\\|\\* \\*\\( \\*\\)+\\)\n"
      . 'pretty-markdown-hr-face))
   "Font lock keywords for pretty-markdown mode.")
 
@@ -166,13 +166,15 @@ pretty-markdown mode is turned on."
     (when (eq (overlay-get ov 'category) 'pretty-markdown-codeblock)
       (delete-overlay ov)))
   (goto-char b)
-  (while (search-forward-regexp "^\\(```\\)\\(.+\\)?$" nil e)
-    (when (or (match-beginning 2)
-              (search-backward-regexp "^\\(```\\)\\(.+\\)$" nil t))
+  (while (search-forward-regexp "^\\(```\\)\\(\\([^:\n]+\\)\\(:.+\\)?\\)?$" nil e)
+    (when (or (match-beginning 3)
+              (search-backward-regexp "^\\(```\\)\\(\\([^:\n]+\\)\\(:.+\\)?\\)$" nil t))
       (let ((bq-beg (match-beginning 1))
             (bq-end (match-end 1))
-            (lang-beg (match-beginning 2))
-            (lang-end (match-end 2))
+            (lang-beg (match-beginning 3))
+            (lang-end (match-end 3))
+            (file-beg (match-beginning 4))
+            (file-end (match-end 4))
             (code-beg (1+ (match-end 0))))
         (when (search-forward-regexp "^\\(```\\)$" nil t)
           (let* ((bq2-beg (match-beginning 1))
@@ -184,6 +186,8 @@ pretty-markdown mode is turned on."
             (put-text-property bq-beg bq-end 'face 'pretty-markdown-hide-face)
             (put-text-property bq2-beg bq2-end 'face 'pretty-markdown-hide-face)
             (put-text-property lang-beg lang-end 'face 'pretty-markdown-kbd-face)
+            (when file-beg
+              (put-text-property file-beg file-end 'face 'pretty-markdown-kbd-face))
             (overlay-put ov1 'face `(:background ,pretty-markdown-codeblock-background))
             (overlay-put ov2 'face '(:family "Monospace"))
             (overlay-put ov1 'category 'pretty-markdown-codeblock)
@@ -235,6 +239,8 @@ pretty-markdown mode is turned on."
   (dolist (mode pretty-markdown-disabled-global-minor-modes)
     (when (and (boundp mode) (symbol-value mode))
       (set (make-local-variable mode) nil)))
+  (when (fboundp 'rainbow-mode)
+    (rainbow-mode 1))
   ;; comment-start, comment-end, comment-use-syntax, comment-start-skip
   ;; imenu-generic-expression
   )
