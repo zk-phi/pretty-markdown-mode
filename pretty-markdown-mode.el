@@ -23,7 +23,7 @@
   :type 'symbol)
 
 (defcustom pretty-markdown-codeblock-background
-  (if (eq frame-background-mode 'light) "#eee" "#111")
+  (if (eq frame-background-mode 'light) "#ddd" "#333")
   "Background color applied to codeblocks in pretty-markdown mode."
   :group 'pretty-markdown
   :type 'string)
@@ -38,21 +38,22 @@ pretty-markdown mode is turned on."
 (defface pretty-markdown-default-face
   '((((background light))
      (:family "Times New Roman" :width semi-condensed :height 1.2
-              :background "#ddd" :foreground "#222"))
+              :background "#eee" :foreground "#222"))
     (t
      (:family "Times New Roman" :width semi-condensed :height 1.2
-              :background "#222" :foreground "#ddd")))
+              :background "#222" :foreground "#eee")))
   "Face used as the default face in pretty-markdown buffers."
   :group 'pretty-markdown)
 
 (defface pretty-markdown-h1-face
-  '((((background light)) (:height 2.0 :underline "#bbb" :bold t))
+  '((((background light)) (:height 2.0 :underline "#ccc" :bold t))
     (t (:height 2.0 :underline "#444" :bold t)))
   "Face used to highlight level-1 headings."
   :group 'pretty-markdown)
 
 (defface pretty-markdown-h2-face
-  '((t (:height 1.7 :bold t)))
+  '((((background light)) (:height 1.7 :underline "#ccc" :bold t))
+    (t (:height 1.7 :underline "#444" :bold t)))
   "Face used to highlight level-2 headings."
   :group 'pretty-markdown)
 
@@ -77,13 +78,13 @@ pretty-markdown mode is turned on."
   :group 'pretty-markdown)
 
 (defface pretty-markdown-hide-face
-  '((((background light)) (:foreground "#ddd" :height 0.1))
+  '((((background light)) (:foreground "#eee" :height 0.1))
     (t (:foreground "#222" :height 0.1)))
   "Face used to hide some texts."
   :group 'pretty-markdown)
 
 (defface pretty-markdown-kbd-face
-  '((((background light)) (:family "Monospace" :background "#ccc" :box "#bbb"))
+  '((((background light)) (:family "Monospace" :background "#ddd" :box "#ccc"))
     (t (:family "Monospace" :background "#333" :box "#444")))
   "Face used to highlight kbd spans."
   :group 'pretty-markdown)
@@ -110,7 +111,7 @@ pretty-markdown mode is turned on."
 
 (defface pretty-markdown-hr-face
   '((((background light)) (:background "#ccc" :foreground "#ccc" :height 0.1))
-    (t (:background "#333" :foreground "#333" :height 0.1)))
+    (t (:background "#444" :foreground "#444" :height 0.1)))
   "Face used to render horizontal rules."
   :group 'pretty-markdown)
 
@@ -139,15 +140,15 @@ pretty-markdown mode is turned on."
      (1 'pretty-markdown-hide-face)
      (2 'pretty-markdown-kbd-face)
      (3 'pretty-markdown-hide-face))
-    ("\\(\\*\\*\\*\\)\\([^\\*\n]+\\)\\(\\*\\*\\*\\)"
+    ("\\(\\*\\*\\*\\|___\\)\\([^\\*\n]+\\)\\(\\*\\*\\*\\|___\\)"
      (1 'pretty-markdown-hide-face)
      (2 'pretty-markdown-italic-bold-face)
      (3 'pretty-markdown-hide-face))
-    ("\\(\\*\\*\\)\\([^\\*\n]+\\)\\(\\*\\*\\)"
+    ("\\(\\*\\*\\|__\\)\\([^\\*\n]+\\)\\(\\*\\*\\|__\\)"
      (1 'pretty-markdown-hide-face)
      (2 'pretty-markdown-bold-face)
      (3 'pretty-markdown-hide-face))
-    ("\\(\\*\\)\\([^\\*\n]+\\)\\(\\*\\)"
+    ("\\(\\*\\|_\\)\\([^\\*\n]+\\)\\(\\*\\|_\\)"
      (1 'pretty-markdown-hide-face)
      (2 'pretty-markdown-italic-face)
      (3 'pretty-markdown-hide-face))
@@ -223,6 +224,10 @@ pretty-markdown mode is turned on."
   (set (make-local-variable 'line-spacing) pretty-markdown-line-spacing)
   (set (make-local-variable 'cursor-type) pretty-markdown-cursor-type)
   (set (make-local-variable 'font-lock-defaults) '(pretty-markdown-font-lock-keywords))
+  (set (make-local-variable 'left-fringe-width) 0)
+  (set (make-local-variable 'right-fringe-width) 0)
+  (set-window-buffer (selected-window) (current-buffer))
+  (run-hooks 'window-configuration-change-hook)
   (face-remap-add-relative 'default 'pretty-markdown-default-face)
   (toggle-truncate-lines -1)
   (jit-lock-register 'pretty-markdown-jit-codeblock-highlighter)
