@@ -28,18 +28,25 @@
   :group 'pretty-markdown
   :type 'string)
 
+(defcustom pretty-markdown-disabled-global-minor-modes
+  '(global-hl-line-mode)
+  "List of global minor modes to try to disable when
+pretty-markdown mode is turned on."
+  :group 'pretty-markdown
+  :type 'string)
+
 (defface pretty-markdown-default-face
   '((((background light))
      (:family "Times New Roman" :width semi-condensed :height 1.2
-              :background "#fff" :foreground "#333"))
+              :background "#ddd" :foreground "#222"))
     (t
      (:family "Times New Roman" :width semi-condensed :height 1.2
-              :background "#333" :foreground "#fff")))
+              :background "#222" :foreground "#ddd")))
   "Face used as the default face in pretty-markdown buffers."
   :group 'pretty-markdown)
 
 (defface pretty-markdown-h1-face
-  '((((background light)) (:height 2.0 :underline "#ccc" :bold t))
+  '((((background light)) (:height 2.0 :underline "#bbb" :bold t))
     (t (:height 2.0 :underline "#444" :bold t)))
   "Face used to highlight level-1 headings."
   :group 'pretty-markdown)
@@ -70,13 +77,14 @@
   :group 'pretty-markdown)
 
 (defface pretty-markdown-hide-face
-  '((t (:height 0.1)))
+  '((((background light)) (:foreground "#ddd" :height 0.1))
+    (t (:foreground "#222" :height 0.1)))
   "Face used to hide some texts."
   :group 'pretty-markdown)
 
 (defface pretty-markdown-kbd-face
-  '((((background light)) (:family "Monospace" :background "#fbf1d4" :box "#ccc"))
-    (t (:family "Monospace" :background "#001e26" :box "#444")))
+  '((((background light)) (:family "Monospace" :background "#ccc" :box "#bbb"))
+    (t (:family "Monospace" :background "#333" :box "#444")))
   "Face used to highlight kbd spans."
   :group 'pretty-markdown)
 
@@ -92,12 +100,18 @@
 
 (defface pretty-markdown-italic-face
   '((t (:slant italic)))
-  "Gace used to highlight italic spans."
+  "Face used to highlight italic spans."
   :group 'pretty-markdown)
 
 (defface pretty-markdown-strikethrough-face
   '((t (:strike-through t)))
-  "Gace used to highlight italic spans."
+  "Face used to highlight italic spans."
+  :group 'pretty-markdown)
+
+(defface pretty-markdown-hr-face
+  '((((background light)) (:background "#ccc" :foreground "#ccc" :height 0.1))
+    (t (:background "#333" :foreground "#333" :height 0.1)))
+  "Face used to render horizontal rules."
   :group 'pretty-markdown)
 
 (defconst pretty-markdown-font-lock-keywords
@@ -140,7 +154,9 @@
     ("\\(~~\\)\\([^\\*\n]+\\)\\(~~\\)"
      (1 'pretty-markdown-hide-face)
      (2 'pretty-markdown-strikethrough-face)
-     (3 'pretty-markdown-hide-face)))
+     (3 'pretty-markdown-hide-face))
+    ("^\\(\\*\\*\\(\\*\\)+\\|--\\(-\\)+\\|- -\\( -\\)+\\)\n"
+     . 'pretty-markdown-hr-face))
   "Font lock keywords for pretty-markdown mode.")
 
 (defun pretty-markdown-jit-codeblock-highlighter (b e)
@@ -211,6 +227,9 @@
   (toggle-truncate-lines -1)
   (jit-lock-register 'pretty-markdown-jit-codeblock-highlighter)
   (jit-lock-mode 1)
+  (dolist (mode pretty-markdown-disabled-global-minor-modes)
+    (when (and (boundp mode) (symbol-value mode))
+      (set (make-local-variable mode) nil)))
   ;; comment-start, comment-end, comment-use-syntax, comment-start-skip
   ;; imenu-generic-expression
   )
