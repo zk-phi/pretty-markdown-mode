@@ -282,7 +282,6 @@ pretty-markdown mode is turned on."
 ;;   ;; apply highlights
 ;;   (pretty-markdown-remove-pretty-overlays (point) e 'list)
 ;;   (while (search-forward-regexp "^[\s\t]*\\([0-9]+\\.\\) +" e t)
-;;     (print (buffer-substring (point-at-bol) (point-at-eol)))
 ;;     (let ((cnt 1))
 ;;       (while (progn
 ;;                (pretty-markdown-make-pretty-overlay
