@@ -13,16 +13,6 @@
 ;; - "```math" support powered by magic-latex-buffer.el
 ;; - emoji support
 
-;; BUG: Possible infinite loop when marking-down a second code block ?
-;;
-;; ```c
-;; int hogehoge (char hoge) {
-;;     return (int)hoge;
-;; }
-;; ```
-;;
-;; ``
-
 ;; COLORS:
 ;; dark background: #eee (fg),  #222 (bg) , #333 (brighter bg) , #555 (borders)
 ;; light background: #222 (fg),  #fff (bg), #eee (darker bg) , #bbb (borders)
@@ -224,54 +214,57 @@ pretty-markdown mode is turned on."
   (dolist (ov (overlays-in b e))
     (when (eq (overlay-get ov 'category) 'pretty-markdown-codeblock)
       (delete-overlay ov)))
-  (goto-char b)
-  (while (search-forward-regexp "^\\(```\\)\\(\\([^:\n]+\\)\\(:.+\\)?\\)?$" e t)
-    (when (or (match-beginning 3)
-              (search-backward-regexp "^\\(```\\)\\(\\([^:\n]+\\)\\(:.+\\)?\\)$" nil t))
-      (let ((bq-beg (match-beginning 1))
-            (bq-end (match-end 1))
-            (lang-beg (match-beginning 3))
-            (lang-end (match-end 3))
-            (file-beg (match-beginning 4))
-            (file-end (match-end 4))
-            (code-beg (1+ (match-end 0))))
-        (when (search-forward-regexp "^\\(```\\)$" nil t)
-          (let* ((bq2-beg (match-beginning 1))
-                 (bq2-end (match-end 1))
-                 (code-end (1- (match-beginning 0)))
-                 (mode (intern (concat (buffer-substring lang-beg lang-end) "-mode")))
-                 (ov1 (make-overlay bq-beg (1+ bq2-end)))
-                 (ov2 (make-overlay code-beg code-end)))
-            (put-text-property bq-beg bq-end 'face 'pretty-markdown-hide-face)
-            (put-text-property bq2-beg bq2-end 'face 'pretty-markdown-hide-face)
-            (put-text-property lang-beg lang-end 'face 'pretty-markdown-kbd-face)
-            (when file-beg
-              (put-text-property file-beg file-end 'face 'pretty-markdown-kbd-face))
-            (overlay-put ov1 'face 'pretty-markdown-codeblock-face)
-            (overlay-put ov2 'face '(:family "Monospace"))
-            (overlay-put ov1 'category 'pretty-markdown-codeblock)
-            (overlay-put ov2 'category 'pretty-markdown-codeblock)
-            (when (fboundp mode)
-              ;; based on `org-src-font-lock-fontify-block' in `org-src.el'
-              (let ((orig-buf (current-buffer))
-                    (orig-str (buffer-substring code-beg code-end))
-                    (tmpbuf (get-buffer-create
-                             (concat " *pretty-markdown-highlight-" (symbol-name mode))))
-                    last next)
-                (with-current-buffer tmpbuf
-                  (delete-region (point-min) (point-max))
-                  (insert orig-str " ")
-                  (unless (eq major-mode mode) (funcall mode))
-                  (font-lock-fontify-buffer)
-                  (setq last (point-min))
-                  (while (setq next (next-single-property-change last 'face))
-                    (put-text-property (+ code-beg (1- last)) (+ code-beg (1- next))
-                                       'face (get-text-property last 'face)
-                                       orig-buf)
-                    (setq last next)))
-                (add-text-properties
-                 code-beg code-end
-                 '(font-lock-fontified t fontified t font-lock-multiline t))))))))))
+  ;; if B is inside a codeblock, go back to the beginning of the
+  ;; codeblock.
+  (when (save-excursion (search-forward-regexp "^```\\(.+\\)?$" e t))
+    (unless (match-beginning 1)
+      (when (search-backward-regexp "^```.+$" nil t)
+        (setq b (point)))))
+  (while (search-forward-regexp "^\\(```\\)\\([^:\n]+\\)\\(:.+\\)?$" e t)
+    (let ((bq-beg (match-beginning 1))
+          (bq-end (match-end 1))
+          (lang-beg (match-beginning 2))
+          (lang-end (match-end 2))
+          (file-beg (match-beginning 3))
+          (file-end (match-end 3))
+          (code-beg (1+ (match-end 0))))
+      (when (search-forward-regexp "^\\(```\\)$" nil t)
+        (let* ((bq2-beg (match-beginning 1))
+               (bq2-end (match-end 1))
+               (code-end (1- (match-beginning 0)))
+               (mode (intern (concat (buffer-substring lang-beg lang-end) "-mode")))
+               (ov1 (make-overlay bq-beg (1+ bq2-end)))
+               (ov2 (make-overlay code-beg code-end)))
+          (put-text-property bq-beg bq-end 'face 'pretty-markdown-hide-face)
+          (put-text-property bq2-beg bq2-end 'face 'pretty-markdown-hide-face)
+          (put-text-property lang-beg lang-end 'face 'pretty-markdown-kbd-face)
+          (when file-beg
+            (put-text-property file-beg file-end 'face 'pretty-markdown-kbd-face))
+          (overlay-put ov1 'face 'pretty-markdown-codeblock-face)
+          (overlay-put ov2 'face '(:family "Monospace"))
+          (overlay-put ov1 'category 'pretty-markdown-codeblock)
+          (overlay-put ov2 'category 'pretty-markdown-codeblock)
+          (when (fboundp mode)
+            ;; based on `org-src-font-lock-fontify-block' in `org-src.el'
+            (let ((orig-buf (current-buffer))
+                  (orig-str (buffer-substring code-beg code-end))
+                  (tmpbuf (get-buffer-create
+                           (concat " *pretty-markdown-highlight-" (symbol-name mode))))
+                  last next)
+              (with-current-buffer tmpbuf
+                (delete-region (point-min) (point-max))
+                (insert orig-str " ")
+                (unless (eq major-mode mode) (funcall mode))
+                (font-lock-fontify-buffer)
+                (setq last (point-min))
+                (while (setq next (next-single-property-change last 'face))
+                  (put-text-property (+ code-beg (1- last)) (+ code-beg (1- next))
+                                     'face (get-text-property last 'face)
+                                     orig-buf)
+                  (setq last next)))
+              (add-text-properties
+               code-beg code-end
+               '(font-lock-fontified t fontified t font-lock-multiline t)))))))))
 
 ;; * list prettifier
 
