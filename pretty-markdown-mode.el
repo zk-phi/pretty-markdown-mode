@@ -271,7 +271,8 @@ pretty-markdown mode is turned on."
 
 (defun pretty-markdown-jit-ordered-list-highlighter (b e)
   ;; extend target region from the beginning of the last ordered list
-  ;; to the end of the next ordered list
+  ;; to the end of the next ordered list (since they may be affected,
+  ;; if a list is splitted into two)
   (goto-char e)
   (when (search-forward-regexp "^[\s\t]*[0-9]+\\. " nil t)
     (goto-char (point-at-bol))
