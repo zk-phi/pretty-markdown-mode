@@ -275,6 +275,20 @@ pretty-markdown mode is turned on."
 
 ;; * list prettifier
 
+;; (defun pretty-markdown-jit-ordered-list-highlighter (b e)
+;;   ;; jump back to the beginning of the first list
+;;   (goto-char (point-at-bol))
+;;   (while (and (looking-at "[\s\t]*\\([0-9]+\\.\\) +") (zerop (forward-line -1))))
+;;   ;; apply highlights
+;;   (pretty-markdown-remove-pretty-overlays (point) e 'list)
+;;   (while (search-forward-regexp "^[\s\t]*\\([0-9]+\\.\\) +" e t)
+;;     (print (buffer-substring (point-at-bol) (point-at-eol)))
+;;     (let ((cnt 1))
+;;       (while (progn
+;;                (pretty-markdown-make-pretty-overlay
+;;                 (match-beginning 1) (match-end 1) 'olist 'display (format "%d." cnt))
+;;                (and (zerop (forward-line 1)) (looking-at "[\s\t]*\\([0-9]+\\.\\) +")))
+;;         (setq cnt (1+ cnt))))))
 
 (defun pretty-markdown-jit-unordered-list-highlighter (b e)
   (pretty-markdown-remove-pretty-overlays b e 'list)
@@ -308,6 +322,7 @@ pretty-markdown mode is turned on."
   (face-remap-add-relative 'default 'pretty-markdown-default-face)
   (toggle-truncate-lines -1)
   (jit-lock-register 'pretty-markdown-jit-codeblock-highlighter)
+  ;; (jit-lock-register 'pretty-markdown-jit-ordered-list-highlighter)
   (jit-lock-register 'pretty-markdown-jit-unordered-list-highlighter)
   (jit-lock-mode 1)
   (dolist (mode pretty-markdown-disabled-global-minor-modes)
