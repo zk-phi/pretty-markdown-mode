@@ -3,14 +3,20 @@
 ;; Copyright (C) 2018- zk_phi
 
 ;; TODOs:
-;; - link '[description](url "title")'
-;; - auto link "http://google.com"
-;; - linkref '[description][ref]' and '[ref]: url "title"'
-;; - remarks "[^1]" and " [^1]: ..."
-;; - inline image '![alt-text](url "title")'
+;; - link-likes
+;;   - normal links '[description](url "title")'
+;;   - auto-links "http://google.com"
+;;   - link-refs '[description][ref]' and '[ref]: url "title"'
+;;   - remarks "[^1]" and " [^1]: ..."
+;;   - inline images '![alt-text](url "title")'
 ;; - tables with autoformatter (like org-mode)
-;; - "```math" support powered by magic-latex-buffer.el
+;; - section folding like org-mode
 ;; - emoji support
+;; - "```math" support powered by magic-latex-buffer.el
+
+;; LIMITATIONS:
+;; - "```" style code blocks without language name are unsupported (use 4 spaces instead)
+;; - setex-style headings are unsupported (use "#" headers instead)
 
 ;; COLORS:
 ;; dark background: #eee (fg),  #222 (bg) , #333 (brighter bg) , #555 (borders)
