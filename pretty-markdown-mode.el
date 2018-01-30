@@ -269,25 +269,26 @@ pretty-markdown mode is turned on."
 
 ;; * list prettifier
 
-;; (defun pretty-markdown-jit-ordered-list-highlighter (b e)
-;;   ;; if E is in an ordered list, extend region forward.
-;;   (goto-char e)
-;;   (goto-char (point-at-bol))
-;;   (while (and (looking-at "[\s\t]*[0-9]+\\. ") (zerop (forward-line 1))))
-;;   (setq e (point))
-;;   ;; if B is in an ordered list, jump backward to the beginning.
-;;   (goto-char b)
-;;   (goto-char (point-at-bol))
-;;   (while (and (looking-at "[\s\t]*[0-9]+\\. ") (zerop (forward-line -1))))
-;;   ;; remove old highlight and apply new highlight
-;;   (pretty-markdown-remove-pretty-overlays (point) e 'list)
-;;   (while (search-forward-regexp "^[\s\t]*\\([0-9]+\\.\\) +" e t)
-;;     (let ((cnt 1))
-;;       (while (progn
-;;                (pretty-markdown-make-pretty-overlay
-;;                 (match-beginning 1) (match-end 1) 'olist 'display (format "%d." cnt))
-;;                (and (zerop (forward-line 1)) (looking-at "[\s\t]*\\([0-9]+\\.\\) +")))
-;;         (setq cnt (1+ cnt))))))
+(defun pretty-markdown-jit-ordered-list-highlighter (b e)
+  ;; extend target region from the beginning of the last ordered list
+  ;; to the end of the next ordered list
+  (goto-char e)
+  (when (search-forward-regexp "^[\s\t]*[0-9]+\\. " nil t)
+    (goto-char (point-at-bol))
+    (while (and (looking-at "[\s\t]*[0-9]+\\. ") (zerop (forward-line 1))))
+    (setq e (point)))
+  (goto-char b)
+  (when (search-backward-regexp "^[\s\t]*[0-9]+\\. " nil t)
+    (while (and (looking-at "[\s\t]*[0-9]+\\. ") (zerop (forward-line -1)))))
+  ;; remove old highlight and apply new highlight
+  (pretty-markdown-remove-pretty-overlays (point) e 'olist)
+  (while (search-forward-regexp "^[\s\t]*\\([0-9]+\\.\\) +" e t)
+    (let ((cnt 1))
+      (while (progn
+               (pretty-markdown-make-pretty-overlay
+                (match-beginning 1) (match-end 1) 'olist 'display (format "%d." cnt))
+               (and (zerop (forward-line 1)) (looking-at "[\s\t]*\\([0-9]+\\.\\) +")))
+        (setq cnt (1+ cnt))))))
 
 (defun pretty-markdown-jit-unordered-list-highlighter (b e)
   (pretty-markdown-remove-pretty-overlays b e 'list)
@@ -321,7 +322,7 @@ pretty-markdown mode is turned on."
   (face-remap-add-relative 'default 'pretty-markdown-default-face)
   (toggle-truncate-lines -1)
   (jit-lock-register 'pretty-markdown-jit-codeblock-highlighter)
-  ;; (jit-lock-register 'pretty-markdown-jit-ordered-list-highlighter)
+  (jit-lock-register 'pretty-markdown-jit-ordered-list-highlighter)
   (jit-lock-register 'pretty-markdown-jit-unordered-list-highlighter)
   (jit-lock-mode 1)
   (dolist (mode pretty-markdown-disabled-global-minor-modes)
