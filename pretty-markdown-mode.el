@@ -3,7 +3,6 @@
 ;; Copyright (C) 2018- zk_phi
 
 ;; TODOs:
-;; - ordered list "1. 1. 1." support
 ;; - link '[description](url "title")'
 ;; - auto link "http://google.com"
 ;; - linkref '[description][ref]' and '[ref]: url "title"'
