@@ -235,6 +235,7 @@ pretty-markdown mode is turned on."
                (mode (intern (concat (buffer-substring lang-beg lang-end) "-mode")))
                (ov1 (make-overlay bq-beg (1+ bq2-end)))
                (ov2 (make-overlay code-beg code-end)))
+          (remove-text-properties code-beg code-end (list 'face))
           (put-text-property bq-beg bq-end 'face 'pretty-markdown-hide-face)
           (put-text-property bq2-beg bq2-end 'face 'pretty-markdown-hide-face)
           (put-text-property lang-beg lang-end 'face 'pretty-markdown-kbd-face)
