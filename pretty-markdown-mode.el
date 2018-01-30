@@ -11,6 +11,7 @@
 ;;   - inline images '![alt-text](url "title")'
 ;; - tables with autoformatter (like org-mode)
 ;; - section folding like org-mode
+;; - toggle checkbox state by clicking
 ;; - emoji support
 ;; - "```math" support powered by magic-latex-buffer.el
 
