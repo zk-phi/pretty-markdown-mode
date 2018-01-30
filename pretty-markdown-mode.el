@@ -2,11 +2,38 @@
 
 ;; Copyright (C) 2018- zk_phi
 
+;; TODOs:
+;; - ordered list "1. 1. 1." support
+;; - link '[description](url "title")'
+;; - auto link "http://google.com"
+;; - linkref '[description][ref]' and '[ref]: url "title"'
+;; - remarks "[^1]" and " [^1]: ..."
+;; - inline image '![alt-text](url "title")'
+;; - tables with autoformatter (like org-mode)
+;; - "```math" support powered by magic-latex-buffer.el
+;; - emoji support
+
+;; BUG: Possible infinite loop when marking-down a second code block ?
+;;
+;; ```c
+;; int hogehoge (char hoge) {
+;;     return (int)hoge;
+;; }
+;; ```
+;;
+;; ``
+
+;; COLORS:
+;; dark background: #eee (fg),  #222 (bg) , #333 (brighter bg) , #555 (borders)
+;; light background: #222 (fg),  #fff (bg), #eee (darker bg) , #bbb (borders)
+
 (require 'font-lock)
 (require 'jit-lock)
 (require 'iimage)
 
 (defconst pretty-markdown-version "0.1.0")
+
+;; * configurable variables and faces
 
 (defgroup pretty-markdown nil
   "Fancy semi-WYSIWYG major mode for markdown documents."
@@ -22,12 +49,6 @@
   :group 'pretty-markdown
   :type 'symbol)
 
-(defcustom pretty-markdown-codeblock-background
-  (if (eq frame-background-mode 'light) "#ddd" "#333")
-  "Background color applied to codeblocks in pretty-markdown mode."
-  :group 'pretty-markdown
-  :type 'string)
-
 (defcustom pretty-markdown-disabled-global-minor-modes
   '(global-hl-line-mode)
   "List of global minor modes to try to disable when
@@ -38,7 +59,7 @@ pretty-markdown mode is turned on."
 (defface pretty-markdown-default-face
   '((((background light))
      (:family "Times New Roman" :width semi-condensed :height 1.2
-              :background "#eee" :foreground "#222"))
+              :background "#fff" :foreground "#222"))
     (t
      (:family "Times New Roman" :width semi-condensed :height 1.2
               :background "#222" :foreground "#eee")))
@@ -46,14 +67,14 @@ pretty-markdown mode is turned on."
   :group 'pretty-markdown)
 
 (defface pretty-markdown-h1-face
-  '((((background light)) (:height 2.0 :underline "#ccc" :bold t))
-    (t (:height 2.0 :underline "#444" :bold t)))
+  '((((background light)) (:height 2.0 :underline "#bbb" :bold t))
+    (t (:height 2.0 :underline "#555" :bold t)))
   "Face used to highlight level-1 headings."
   :group 'pretty-markdown)
 
 (defface pretty-markdown-h2-face
-  '((((background light)) (:height 1.7 :underline "#ccc" :bold t))
-    (t (:height 1.7 :underline "#444" :bold t)))
+  '((((background light)) (:height 1.6 :bold t))
+    (t (:height 1.6 :bold t)))
   "Face used to highlight level-2 headings."
   :group 'pretty-markdown)
 
@@ -78,14 +99,20 @@ pretty-markdown mode is turned on."
   :group 'pretty-markdown)
 
 (defface pretty-markdown-hide-face
-  '((((background light)) (:foreground "#eee" :height 0.1))
+  '((((background light)) (:foreground "#fff" :height 0.1))
     (t (:foreground "#222" :height 0.1)))
   "Face used to hide some texts."
   :group 'pretty-markdown)
 
+(defface pretty-markdown-codeblock-face
+  '((((background light)) (:family "Monospace" :background "#eee"))
+    (t (:family "Monospace" :background "#333")))
+  "Face used to highlight codeblocks."
+  :group 'pretty-markdown)
+
 (defface pretty-markdown-kbd-face
-  '((((background light)) (:family "Monospace" :background "#ddd" :box "#ccc"))
-    (t (:family "Monospace" :background "#333" :box "#444")))
+  '((((background light)) (:family "Monospace" :background "#eee" :box "#bbb"))
+    (t (:family "Monospace" :background "#333" :box "#555")))
   "Face used to highlight kbd spans."
   :group 'pretty-markdown)
 
@@ -110,10 +137,38 @@ pretty-markdown mode is turned on."
   :group 'pretty-markdown)
 
 (defface pretty-markdown-hr-face
-  '((((background light)) (:background "#ccc" :foreground "#ccc" :height 0.1))
-    (t (:background "#444" :foreground "#444" :height 0.1)))
+  '((((background light)) (:background "#bbb" :foreground "#bbb" :height 0.1))
+    (t (:background "#555" :foreground "#555" :height 0.1)))
   "Face used to render horizontal rules."
   :group 'pretty-markdown)
+
+(defface pretty-markdown-quote-face
+  '((((background light)) (:background "#bbb" :foreground "#bbb" :height 0.5))
+    (t (:background "#555" :foreground "#555" :height 0.5)))
+  "Face used to render horizontal rules."
+  :group 'pretty-markdown)
+
+;; * utility functions
+
+(defun pretty-markdown-remove-pretty-overlays (from to category)
+  (let ((category (intern (concat "pretty-markdown-" (symbol-name category)))))
+    (dolist (ov (overlays-in from to))
+      (when (eq (overlay-get ov 'category) category)
+        (delete-overlay ov)))))
+
+(defun pretty-markdown-make-pretty-overlay (from to category &rest props)
+  (let* ((ov (make-overlay from to))
+         (category (intern (concat "pretty-markdown-" (symbol-name category))))
+         (hooks (list `(lambda (&rest _) (delete-overlay ,ov)))))
+    (overlay-put ov 'category category)
+    (overlay-put ov 'modification-hooks hooks)
+    (overlay-put ov 'insert-in-front-hooks hooks)
+    (while props
+      (overlay-put ov (car props) (cadr props))
+      (setq props (cddr props)))
+    ov))
+
+;; * font-lock highlighter
 
 (defconst pretty-markdown-font-lock-keywords
   '(
@@ -157,8 +212,12 @@ pretty-markdown mode is turned on."
      (2 'pretty-markdown-strikethrough-face)
      (3 'pretty-markdown-hide-face))
     ("^\\(\\*\\*\\(\\*\\)+\\|--\\(-\\)+\\|- -\\( -\\)+\\|\\* \\*\\( \\*\\)+\\)\n"
-     . 'pretty-markdown-hr-face))
+     . 'pretty-markdown-hr-face)
+    ("^[\s\t]*\\(>\\) "
+     (1 'pretty-markdown-quote-face)))
   "Font lock keywords for pretty-markdown mode.")
+
+;; * codeblock highlighter
 
 (defun pretty-markdown-jit-codeblock-highlighter (b e)
   "Codeblock highlighter for pretty-markdown mode."
@@ -166,7 +225,7 @@ pretty-markdown mode is turned on."
     (when (eq (overlay-get ov 'category) 'pretty-markdown-codeblock)
       (delete-overlay ov)))
   (goto-char b)
-  (while (search-forward-regexp "^\\(```\\)\\(\\([^:\n]+\\)\\(:.+\\)?\\)?$" nil e)
+  (while (search-forward-regexp "^\\(```\\)\\(\\([^:\n]+\\)\\(:.+\\)?\\)?$" e t)
     (when (or (match-beginning 3)
               (search-backward-regexp "^\\(```\\)\\(\\([^:\n]+\\)\\(:.+\\)?\\)$" nil t))
       (let ((bq-beg (match-beginning 1))
@@ -188,7 +247,7 @@ pretty-markdown mode is turned on."
             (put-text-property lang-beg lang-end 'face 'pretty-markdown-kbd-face)
             (when file-beg
               (put-text-property file-beg file-end 'face 'pretty-markdown-kbd-face))
-            (overlay-put ov1 'face `(:background ,pretty-markdown-codeblock-background))
+            (overlay-put ov1 'face 'pretty-markdown-codeblock-face)
             (overlay-put ov2 'face '(:family "Monospace"))
             (overlay-put ov1 'category 'pretty-markdown-codeblock)
             (overlay-put ov2 'category 'pretty-markdown-codeblock)
@@ -214,6 +273,20 @@ pretty-markdown mode is turned on."
                  code-beg code-end
                  '(font-lock-fontified t fontified t font-lock-multiline t))))))))))
 
+;; * list prettifier
+
+
+(defun pretty-markdown-jit-unordered-list-highlighter (b e)
+  (pretty-markdown-remove-pretty-overlays b e 'list)
+  (while (search-forward-regexp "^[\s\t]*\\([-*+]\\) +\\(\\[[x ]\\]\\)?" e t)
+    (pretty-markdown-make-pretty-overlay (match-beginning 1) (match-end 1) 'list 'display "・")
+    (when (match-beginning 2)
+      (pretty-markdown-make-pretty-overlay
+       (match-beginning 2) (match-end 2) 'list
+       'display (if (string= "[x]" (match-string 2)) "☑︎" "☐")))))
+
+;; * the major mode
+
 (defun pretty-markdown-indent-line ()
   (interactive)
   (when (string-match "^[\s\t]*$" (buffer-substring (point-at-bol) (point-at-eol)))
@@ -235,6 +308,7 @@ pretty-markdown mode is turned on."
   (face-remap-add-relative 'default 'pretty-markdown-default-face)
   (toggle-truncate-lines -1)
   (jit-lock-register 'pretty-markdown-jit-codeblock-highlighter)
+  (jit-lock-register 'pretty-markdown-jit-unordered-list-highlighter)
   (jit-lock-mode 1)
   (dolist (mode pretty-markdown-disabled-global-minor-modes)
     (when (and (boundp mode) (symbol-value mode))
