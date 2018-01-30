@@ -282,12 +282,17 @@ pretty-markdown mode is turned on."
     (while (and (looking-at "[\s\t]*[0-9]+\\. ") (zerop (forward-line -1)))))
   ;; remove old highlight and apply new highlight
   (pretty-markdown-remove-pretty-overlays (point) e 'olist)
-  (while (search-forward-regexp "^[\s\t]*\\([0-9]+\\.\\) +" e t)
+  (while (search-forward-regexp "^[\s\t]*\\([0-9]+\\.\\) +\\(\\[[x ]\\]\\)?" e t)
     (let ((cnt 1))
       (while (progn
                (pretty-markdown-make-pretty-overlay
                 (match-beginning 1) (match-end 1) 'olist 'display (format "%d." cnt))
-               (and (zerop (forward-line 1)) (looking-at "[\s\t]*\\([0-9]+\\.\\) +")))
+               (when (match-beginning 2)
+                 (pretty-markdown-make-pretty-overlay
+                  (match-beginning 2) (match-end 2) 'list
+                  'display (if (string= "[x]" (match-string 2)) "☑︎" "☐")))
+               (and (zerop (forward-line 1))
+                    (looking-at "[\s\t]*\\([0-9]+\\.\\) +\\(\\[[x ]\\]\\)?")))
         (setq cnt (1+ cnt))))))
 
 (defun pretty-markdown-jit-unordered-list-highlighter (b e)
