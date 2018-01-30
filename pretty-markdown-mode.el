@@ -269,10 +269,16 @@ pretty-markdown mode is turned on."
 ;; * list prettifier
 
 ;; (defun pretty-markdown-jit-ordered-list-highlighter (b e)
-;;   ;; jump back to the beginning of the first list
+;;   ;; if E is in an ordered list, extend region forward.
+;;   (goto-char e)
 ;;   (goto-char (point-at-bol))
-;;   (while (and (looking-at "[\s\t]*\\([0-9]+\\.\\) +") (zerop (forward-line -1))))
-;;   ;; apply highlights
+;;   (while (and (looking-at "[\s\t]*[0-9]+\\. ") (zerop (forward-line 1))))
+;;   (setq e (point))
+;;   ;; if B is in an ordered list, jump backward to the beginning.
+;;   (goto-char b)
+;;   (goto-char (point-at-bol))
+;;   (while (and (looking-at "[\s\t]*[0-9]+\\. ") (zerop (forward-line -1))))
+;;   ;; remove old highlight and apply new highlight
 ;;   (pretty-markdown-remove-pretty-overlays (point) e 'list)
 ;;   (while (search-forward-regexp "^[\s\t]*\\([0-9]+\\.\\) +" e t)
 ;;     (let ((cnt 1))
